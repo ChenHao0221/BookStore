@@ -1,0 +1,271 @@
+第一阶段：登录注册表单验证
+    验证用户输入的值是否合法
+    jQuery + 正则表达式
+
+第二阶段：登录注册功能
+    软件架构（见截图）
+    项目分层开发
+
+第三阶段：项目优化
+    1、将所有的HTML页面改为jsp
+        很多页面都有重复信息，特别是菜单，我们也可以抽取出来
+        1）jsp页面和HTML页面就差了一个Page指令头
+        2）相关链接页必须改
+        3）引入页面（把相关的菜单抽取出来并用include引入）
+            <%@include file=" "%>
+        4）在页面上，相对路径不靠谱，需要使用绝对路径（可以使用base标签给所有相关路径一个基准），所有页面要引入css文件，还要引入jQuery文件
+            将这些也可以抽取出来，在每个页面引入
+            base的href属性修改为动态获取：
+                <%=request.getScheme()%>://<%=request.getServerName()%>:<%=request.getServerPort()%><%=request.getContextPath()%>
+
+    2、登录、注册，如果发生错误应该有错误信息提示
+        登录错误提示：
+            1）用户输入用户名密码
+            2）发送登录请求
+            3）登录Servlet来处理登录请求--->查用户
+                成功：重定向到页面
+                失败：转发到页面
+            4）想要在登录页面动态获取错误信息
+               在转发之前设置一个错误消息提示，把它放在域中。jsp就可以在域中取数据
+        注册错误提示：
+            1）用户输入用户名密码和其他信息
+            2）发送注册请求
+            3）注册Servlet来处理注册请求--->注册用户
+                成功：重定向到页面
+                失败：转发到页面
+            4）想要在注册页面动态获取错误信息
+                在转发之前设置一个错误消息提示，把它放在域中。jsp就可以在域中取数据
+
+    3、 表单回显
+        当登录注册不成功的时候，回到登录注册页面，我们希望将之前的信息保留（表单回显），方便操作
+        表单回显：
+            1）用户输入用户名密码
+            2）发送登录请求
+            3）登录Servlet来处理登录请求--->查用户
+                成功：重定向到页面
+                失败：转发到页面
+            4）想要在登录页面动态获取之前输入的值
+               方法一：可以将获取的数据放在request域中，在页面获取（不推荐）
+               方法二：直接在页面使用request.getParameter（因为转发过来是同一个request）
+        注册回显
+
+    4、优化Servlet逻辑
+        一个请求对应一个Servlet需要优化
+        和用户相关的业务逻辑都放在了UserService中
+        能不能把和用户相关的请求（登录、注册...）放在一个Servlet里面
+
+        和用户相关的请求   UserServlet
+        和图书相关的请求   BookServlet
+
+        分析：
+            注册、登录都被UserServlet处理 ---> 所以注册登录都请求同一个地址
+            1、可以为请求添加一个参数字段，提交的时候带上参数值（问题：get请求请求地址中的数据会被表单数据覆盖，带不上）
+            添加一个隐藏的表单项<input type="hidden" name="method" value="login">
+
+            (利用反射机制就可以避免层层if判断)
+            所有的Servlet都是通过反射来调用相应的方法，所以我们可以抽取出一个baseServlet
+
+    5、 参数封装优化
+        我们使用分层架构：
+        Servlet ---> Service ---> Dao ---> Bean：在系统中数据都使用对象包装
+        注册：
+            第一步：来到注册Servlet，获取数据封装对象
+        登录：
+            第一步：来到登录Servlet，获取数据封装对象
+        XX：
+            第一步：来到 XX Servlet，获取数据封装对象
+        我们应该将获取数据封装对象这个过程抽取出来（因为封装对象还涉及到数据转型）：User user = Utils.param2Bean(T);
+        根据需求自动封装对象 ---> 反射
+        request里面带了很多参数，根据要封装的对象获取相应的参数进行封装
+        由于request获取的数据都是String类型，要封装成Bean的话，需要类型转换
+        beanutils工具类：有丰富的操作javaBean的方法（导包：commons-beanutils-1.9.3.jar、commons-logging-1.1.1.jar）
+
+        JavaBean的属性值的设置是按照getter、setter方法设定的！！
+        属性的真正名字是get或set后面的字符串！！！（实际属性对应的名字是小写，get、set后面的字符串是大写的，驼峰命名法）
+
+第四阶段：使用el进行错误消息提示以及表单回显
+
+第五阶段：图书后台管理的增删改查以及前端显示
+    1、后端的图书管理功能
+        1）显示层
+        2）控制层：Servlet
+        3）业务逻辑层：Service
+        4）持久化层：Dao
+        5）模型层：Bean
+        6）数据库对应的表
+        --->
+        6）创建图书相关的表：
+            主键  自增
+            书名  varchar
+            作者  varchar
+            价格  double
+            销量  int
+            库存  int
+            封面图片  varchar 只保存图书封面的图片绝对路径，保存图片相对于当前项目的路径 <img src=" ">
+        5）对应的javaBean
+        4）开发数据库层
+            面向接口开发
+            BookDao
+                显示所有图书：List<Book> getAllBook()
+                boolean addBook(Book book)
+                boolean delBook(Book book)
+                boolean updateBook(Book book)
+                Book getBook(Book book)：找出一本图书
+            BookDaoImpl extends BaseDao<Book> implements BookDao
+        3）业务逻辑层
+            增删改查    面向接口编程
+            添加图书
+            删除图书
+            修改图书
+            图书列表
+            BookService
+                add(Book book)
+                delete(Book book)
+                update(Book book)
+                getOne(Book book)
+                getAll(Book book)
+            BookServiceImpl
+                1、用户点击图书管理，显示所有的图书
+                    点击图书管理--->交给servlet--->查出数据--->交给页面显示
+                    BookManagerServlet
+                        list()处理图书列表的请求
+
+                2、添加图书
+                3、删除图书
+                    点击删除--->Servlet接收请求--->按照图书id删除图书--->还是回到图书列表页面
+                    删除需要提示用户
+                    删除请求相应的servlet方法
+                4、修改图书
+                    1）用户点击修改，先要去servlet，查出要修改的图书详情。显示到页面
+                    问题：修改和添加都是同一个页面，都指向同一个方法
+                    解决1：去编辑页面的时候带上参数m=update或m=add（不推荐）
+                    解决2：将提交过来的数据封装，判断是否有id；如果有id就是修改操作
+                5、分页显示
+                    原理：limit
+                    select * from bs_book2 limit index,size
+
+                    显示层
+                    Servlet控制层  BookManagerServlet--->list
+                    Service层  查出部分图书（分页要求的）
+                    Dao层      查出部分图书（分页查询 limit）
+                    Bean层     图书。需要一个分页模型（封装当前分页信息：当前第几页、总页数...）
+
+                    分页模型Page：（见截图）
+                        当前是第几页  int pageNo
+                        总页码        int totalPages
+                        总记录数      int totalCount
+                        每页显示多少记录      int pageSize
+                        数据库查询的索引      int index
+                        分页的实际数据        List<T> pageData
+                        是否有下一页          Boolean hasNext
+                        是否有上一页          Boolean hasPrev
+
+                    1、创建Bean层的分页模型
+                    2、dao层
+                        应该返回原始数据
+                        List<Book> getPageList(int index, int pageSize)
+                        获取总记录数的方法 getTotalCount()
+                    3、service层
+                        getPage(String pageNo, String pageSize)
+                    4、Servlet层
+                        第一次请求显示图书列表。应该显示第一页数据
+                        page()：获取某一页数据
+
+
+        2）Servlet 控制器Controller   用来控制页面转发
+
+
+    2、图书的前端显示
+        显示层
+        控制器BookClientServlet --> page
+        service bookservice -> getPage()
+        dao
+        bean
+
+        分页抽取
+
+        带条件的查询
+            点击查询--->通过Servlet处理--->按照要求查询并返回页面显示
+            显示层
+            控制器BookClientServlet --> page，在原分页之上，带条件查询
+            service bookservice -> getPage()--->带上条件查询
+            dao     编写一个带条件查询的方法（价格区间）
+            bean
+
+第六阶段：登入登出（注销）、验证码、购物车
+    1、登录
+        将登录的用户保存到session中，方便在其他资源共享
+        在页面直接从session取出用户的详细信息
+    2、登出
+        用户退出系统，直接将session设为不可用
+        在servlet中将session清空即可
+        logout()
+    3、根据session中是否有user对象就可以知道用户是否已经登录
+    4、验证码
+        防止多次恶意请求
+        和token机制一样：
+            在页面生成验证码图片--->给session中保存验证码实际的内容--->用户提交表单--->取出session中的内容以及页面带来的内容（验证码）进行匹配
+            --->成功则提交
+        使用工具生成验证码：
+            <img src="请求kaptcha">
+    5、购物车
+        实现
+            1、基于cookie，把购买的物品保存成cookie存于浏览器
+            2、基于session，把购买的物品保存到session中（服务器端）浏览器
+                浏览器关闭丢失购物车
+            3、基于数据库，把购买的物品保存到数据库中（主流）
+
+        基于session实现方式：
+            模型层（见截图）
+                方法：
+                                    void addBook2Cart(Book book); //在页面传入图书id
+                                    void deleteItem(String bookid);   删除一个购物项
+                                    List<cartItem> getItem();   获取所有购物项，把这个交给页面
+                                    void updateCount(String bookid, int count);   修改某一项的数量，传入修改后的数量
+                                    void clear()；   清空购物车
+                                将对购物车操作的所有方法封装到Cart里面
+                double,float 在进行运算的时候会产生精度问题
+                    1、大整数运算
+                    2、浮点数运算
+                解决方法：BigDecimal
+                只需要将需要运算的数字使用BigDecimal包装，利用BigDecimal提供的运算进行计算
+                浮点数需要使用String类型的构造器
+            控制器
+                添加图书到购物车
+
+            service：不用写
+            dao：不用写
+
+第七阶段：订单结算
+    1、结算逻辑（见截图）
+    2、抽取模型
+        目的：在页面显示，在数据库保存
+
+        UUID.randomString()不能用来做订单号
+        订单号应该是一个有意义的标识，还必须唯一：时间戳+用户id
+
+    3、编写dao
+        OrderDao
+        OrderItemDao
+    4、编写service
+        OrderService
+        OrderItemService
+    5、编写servlet
+        OrderClientServlet
+        OrderManagerServlet
+
+    优化：将保存订单项应该作为批处理
+    在BaseDao中添加批处理方法
+
+第八阶段：优化，引入filter
+    只要是用户订单操作，应该先登录
+    使用filter验证登录
+
+第九阶段：Ajax验证用户名是否可用
+    1、注册优化，输完用户名就提示是否可用
+    2、使用Ajax进行添加购物车操作
+        加入购物车，发送Ajax请求，会收到服务器响应的数据，将响应的数据取出即可
+    3、使用Ajax修改购物车
+
+
+

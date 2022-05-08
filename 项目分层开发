@@ -1,0 +1,40 @@
+1）需求分析，建立模型
+    1、建立登录注册相关模型（bean层）  数据库表的映射
+        1-建立用户表
+            当数据表很多的时候，也需要分层，一般按照命名规则分层
+            sys_user
+            bbs_content
+            auth_menu
+        2-建立对应的User类
+    2、建立dao层：操作数据库
+        1-JDBCUtils：获取数据库连接  使用c3p0获取链接
+            1、导jar包：驱动包、c3p0、dbutils、mchange
+
+        建立BaseDao，专门用来被其他的dao类继承。BaseDao定义了一些基本的操作
+        BaseDao<T>：
+            public T getBean()
+            public List<T> getBeanList()
+            public int update()
+
+        2-UserDao：操作User表的Dao(Data Access Object)类
+            面向接口编程
+            定义一个UserDao接口：定义UserDao有什么方法
+            UserDao接口：
+                User getUserByUserNameAndPassword(User user);
+                boolean registUser(User user);
+
+    3、建立Service层
+        1-UserService：完成用户的登录注册功能
+        面向接口编程
+        UserService接口：
+            User login(User user);
+            boolean regist(User user)
+
+    4、建立Servlet层：处理用户的请求
+        1-LoginServlet：处理登录请求
+        2-RegistServlet：处理注册请求
+    5、界面
+        修改相应的逻辑
+
+注意：
+    config文件夹要设置成源码文件夹
